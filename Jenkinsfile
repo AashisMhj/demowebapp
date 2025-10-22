@@ -14,11 +14,10 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            stage('Checkout') {
-                steps {
-                    git branch: 'main', url: 'https://github.com/AashisMhj/demowebapp.git'
-                }
+            steps {
+                git branch: 'main', url: 'https://github.com/AashisMhj/demowebapp.git'
             }
+           
         }
 
         stage('Build') {
