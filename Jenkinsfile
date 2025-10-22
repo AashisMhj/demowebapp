@@ -14,8 +14,10 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            steps {
-                git 'https://github.com/aashismhj/demowebapp.git'
+            stage('Checkout') {
+                steps {
+                    git branch: 'main', url: 'https://github.com/AashisMhj/demowebapp.git'
+                }
             }
         }
 
