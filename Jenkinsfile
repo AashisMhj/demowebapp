@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        maven 'maven'
+        maven 'Maven' // 👈 use the exact name from Jenkins → Manage Jenkins → Global Tool Configuration
     }
 
     environment {
@@ -17,7 +17,6 @@ pipeline {
             steps {
                 git branch: 'main', url: 'https://github.com/AashisMhj/demowebapp.git'
             }
-           
         }
 
         stage('Build') {
@@ -29,13 +28,28 @@ pipeline {
         stage('Deploy') {
             steps {
                 sshagent(['ec2-key']) {
-                    sh '''
-                    scp -o StrictHostKeyChecking=no target/${JAR_NAME} ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
-                    ssh ${DEPLOY_USER}@${DEPLOY_HOST} '
-                        pkill -f ${JAR_NAME} || true
-                        nohup java -jar ${DEPLOY_PATH}/${JAR_NAME} > app.log 2>&1 &
-                    '
-                    '''
+                    sh """
+                        # Copy the JAR to EC2
+                        scp -o StrictHostKeyChecking=no target/${JAR_NAME} ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
+
+                        # Restart the Spring Boot app remotely
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
+                            set -e
+                            cd ${DEPLOY_PATH}
+
+                            # Kill old process if running
+                            PID=\$(pgrep -f ${JAR_NAME}) || true
+                            if [ -n "\$PID" ]; then
+                                echo "Stopping existing process \$PID..."
+                                kill -9 \$PID || true
+                            fi
+
+                            # Start the new app in background
+                            echo "Starting ${JAR_NAME}..."
+                            nohup java -jar ${JAR_NAME} > app.log 2>&1 &
+                            echo "App started!"
+                        EOF
+                    """
                 }
             }
         }
