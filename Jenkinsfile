@@ -1,16 +1,11 @@
 pipeline {
     agent any
 
-    tools {
-        jdk 'jdk17'
-        maven 'Maven' // 👈 use the exact name from Jenkins → Manage Jenkins → Global Tool Configuration
-    }
-
     environment {
+        IMAGE_NAME = 'aashismhj/demowebapp'    // Change to your Docker Hub repo
         DEPLOY_USER = 'ec2-user'
-        DEPLOY_HOST = '100.27.198.232'
+        DEPLOY_HOST = '18.209.7.79'
         DEPLOY_PATH = '/home/ec2-user/demowebapp'
-        JAR_NAME = 'demowebapp-0.0.1-SNAPSHOT.jar'
     }
 
     stages {
@@ -20,37 +15,36 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build Docker Image') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh 'docker build -t ${IMAGE_NAME}:latest .'
             }
         }
 
-        stage('Deploy') {
+        stage('Push Docker Image') {
+            environment {
+                DOCKERHUB_CREDENTIALS = credentials('docker-id') // Jenkins credentials ID
+            }
+            steps {
+                sh '''
+                echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                docker push ${IMAGE_NAME}:latest
+                docker logout
+                '''
+            }
+        }
+
+        stage('Deploy on EC2') {
             steps {
                 sshagent(['ec2-key']) {
-                    sh """
-                        # Copy the JAR to EC2
-                        scp -o StrictHostKeyChecking=no target/${JAR_NAME} ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
-
-                        # Restart the Spring Boot app remotely
-                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
-                            set -e
-                            cd ${DEPLOY_PATH}
-
-                            # Kill old process if running
-                            PID=\$(pgrep -f ${JAR_NAME}) || true
-                            if [ -n "\$PID" ]; then
-                                echo "Stopping existing process \$PID..."
-                                kill -9 \$PID || true
-                            fi
-
-                            # Start the new app in background
-                            echo "Starting ${JAR_NAME}..."
-                            nohup java -jar ${JAR_NAME} > app.log 2>&1 &
-                            echo "App started!"
-                        EOF
-                    """
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
+                        docker pull ${IMAGE_NAME}:latest
+                        docker stop demowebapp || true
+                        docker rm demowebapp || true
+                        docker run -d --name demowebapp -p 8080:8080 ${IMAGE_NAME}:latest
+                    EOF
+                    '''
                 }
             }
         }
