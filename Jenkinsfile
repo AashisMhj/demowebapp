@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         DEPLOY_USER = 'ec2-user'
-        DEPLOY_HOST = '54.146.236.246'
+        DEPLOY_HOST = '100.27.198.232'
         DEPLOY_PATH = '/home/ec2-user/demowebapp'
         JAR_NAME = 'demowebapp-0.0.1-SNAPSHOT.jar'
     }
