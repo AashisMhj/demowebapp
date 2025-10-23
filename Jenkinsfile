@@ -4,7 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = 'aashismhj/demowebapp'    // Change to your Docker Hub repo
         DEPLOY_USER = 'ec2-user'
-        DEPLOY_HOST = '18.209.7.79'
+        DEPLOY_HOST = '34.227.195.74'
         DEPLOY_PATH = '/home/ec2-user/demowebapp'
     }
 
