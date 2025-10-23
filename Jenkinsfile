@@ -39,12 +39,11 @@ pipeline {
                 script {
                     sshagent(['ec2-key']) {
                         sh """
-        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
-        sudo docker pull ${IMAGE_NAME}:latest
-        sudo docker stop demowebapp || true
-        sudo docker rm demowebapp || true
-        sudo docker run -d --name demowebapp -p 8080:8080 ${IMAGE_NAME}:latest
-        EOF
+        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} "\
+sudo docker pull ${IMAGE_NAME}:latest && \
+sudo docker stop demowebapp || true && \
+sudo docker rm demowebapp || true && \
+sudo docker run -d --name demowebapp -p 8080:8080 ${IMAGE_NAME}:latest"
                         """
                     }
                 }
